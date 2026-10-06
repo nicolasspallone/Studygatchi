@@ -31,9 +31,7 @@ def create_task(request: Request) -> Response:
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_task(request: Request) -> Response:
-    username = request.query_params.get("username")
-    if not username:
-        return Response({"error": "No username provided"}, status=status.HTTP_400_BAD_REQUEST)
+    username = request.query_params.get("username") or request.user.username
 
     # look up user and react accordingly if they don't exist
     try:
@@ -46,3 +44,21 @@ def get_task(request: Request) -> Response:
 
     except StudyUser.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_task(request: Request, task_id: int) -> Response:
+    if not request.user.is_active:
+        return Response({"error": "Account is inactive"}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        task: Task = Task.objects.get(id=task_id, user=request.user)
+    except Task.DoesNotExist:
+        return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    task.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+
